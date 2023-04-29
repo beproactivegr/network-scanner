@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 
 """
-	Network Scanner
-	Copyright (c) 2023 @beproactivegr
-	https://github.com/beproactivegr/network-scanner
+Network Scanner
 
-	A free and open source utility for network discovery.
+Copyright (c) 2023 @beproactivegr
+https://github.com/beproactivegr/network-scanner
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+A free and open source utility for network discovery.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-    For more see the file 'LICENSE' for copying permission.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+For more see the file 'LICENSE' for copying permission.
 """
 
 __author__ = "beproactivegr"
