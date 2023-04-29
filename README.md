@@ -4,9 +4,15 @@ Network Scanner is a free and open source utility for network discovery. Network
 
 ---
 
+## License
+
+* [GPLv3](LICENSE)
+
+---
+
 ## Credits
 
-* https://nmap.org/
-* https://xael.org/pages/python-nmap-en.html
+* [Nmap](https://nmap.org/)
+* [Python-Nmap](https://xael.org/pages/python-nmap-en.html)
 
 ---
