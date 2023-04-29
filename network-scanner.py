@@ -33,6 +33,7 @@ __maintainer__ = "beproactivegr"
 
 ################################
 
+import sys
 import subprocess
 
 try:
@@ -47,8 +48,10 @@ except ImportError:
 
 ################################
 
+
 def is_platform_windows():
     return platform.system() == "Windows"
+
 
 def is_platform_linux():
     return platform.system() == "Linux"
@@ -83,6 +86,11 @@ def CheckNmapInstallation():
 			subprocess.call(["apt", "update"])
 			subprocess.call(["apt", "install", "-y", "nmap"])
 
+
+def GetUserInput(prompt):
+	return input(colored(prompt, "magenta"))
+
+
 if __name__ == '__main__':
 
 	try:
@@ -94,7 +102,13 @@ if __name__ == '__main__':
 
 		CheckNmapInstallation()
 		CheckPythonNmapInstallation()
+		print()
+
+		target = GetUserInput("Please provide an IP address or a hostname to scan: ")
+
+		print(colored(f'Scanning {target} ports. This may take a while...', "cyan"))
 
 		print()
+
 	except KeyboardInterrupt:
 		sys.exit(0)
