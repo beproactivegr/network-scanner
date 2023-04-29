@@ -33,13 +33,68 @@ __maintainer__ = "beproactivegr"
 
 ################################
 
+import subprocess
 
+try:
+	from termcolor import colored
+except ImportError:
+	subprocess.call(['pip', 'install', 'termcolor'])
+
+try:
+	from termcolor import colored
+except ImportError:
+	sys.exit()
 
 ################################
+
+def is_platform_windows():
+    return platform.system() == "Windows"
+
+def is_platform_linux():
+    return platform.system() == "Linux"
+
+
+def CheckPythonNmapInstallation():
+	try:
+		print(colored("Checking Python Nmap library: ", "white"), end="")
+		import nmap
+		print(colored("Python Nmap library is installed.", "green"))
+	except ImportError:
+		print(colored('Python-nmap library is not installed. Installing now...', 'yellow'))
+		subprocess.call(['pip', 'install', 'python-nmap'])
+
+	try:
+		import nmap
+	except ImportError:
+		print(colored('Python-nmap library is not installed. Exiting...', 'red'))
+		sys.exit()
+
+
+def CheckNmapInstallation():
+	try:
+		print(colored("Checking Nmap: ", "white"), end="")
+		subprocess.check_output(["nmap", "--version"])
+		print(colored("Nmap is installed.", "green"))
+	except OSError:
+		print(colored("Nmap is not installed.", "yellow"))
+
+		if is_platform_linux():
+			print(colored("Installing it now...", "yellow"))
+			subprocess.call(["apt", "update"])
+			subprocess.call(["apt", "install", "-y", "nmap"])
 
 if __name__ == '__main__':
 
 	try:
 
+		print()
+		print(colored("Network Scanner - https://beproactive.gr", "cyan"))
+		print(colored("A free and open source utility for network discovery.", "cyan"))
+		print()
+
+		CheckNmapInstallation()
+		CheckPythonNmapInstallation()
+
+		print()
 	except KeyboardInterrupt:
-        sys.exit(0)
+		sys.exit(0)
