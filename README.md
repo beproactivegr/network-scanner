@@ -1,6 +1,23 @@
 # Network-Scanner
 
-Network Scanner is a free and open source utility for network discovery. Network Scanner uses Nmap to determine what hosts are available on the network, what services those hosts are offering, what operating systems (and OS versions) they are running etc. Network Scanner runs on all major computer operating systems.
+Network Scanner is a free and open source utility written in Python3 for network discovery. Network Scanner uses Nmap to determine what hosts are available on the network, what services those hosts are offering, what operating systems (and OS versions) they are running etc. Network Scanner runs on all major computer operating systems.
+
+---
+
+## Operating Systems
+
+* Windows
+* Linux
+
+---
+
+## Usage
+
+You can run network-scanner either by executing the Python3 script through the Python3 interpreter or by executing one of the binaries files.
+
+```
+python network-scanner.py
+```
 
 ---
 
