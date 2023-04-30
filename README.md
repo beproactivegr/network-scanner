@@ -15,7 +15,7 @@ Network Scanner is a free and open source utility written in Python3 for network
 
 You can run network-scanner either by executing the Python3 script through the Python3 interpreter or by executing one of the binary files. 
 
-To use network-scanner you need to have nmap installed in your system. 
+To use network-scanner you need to have nmap installed on your system. 
 
 * [Download Nmap](https://nmap.org/download)
 
