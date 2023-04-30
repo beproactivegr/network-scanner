@@ -107,27 +107,31 @@ def isValidPortGroup(port):
 def ScanHost(host, ports, destination):
 	try:
 		isTopScan = False
-		destination = os.path.join(destination, f'network_scanner_results_{host}')
-		gnmapFile = destination + '.gnmap'
-		nmapFile = destination + '.nmap'
+
+		tcpDestination = os.path.join(destination, f'network_scanner_tcp_results_{host}')
+		gnmapFile = tcpDestination + '.gnmap'
+		nmapFile = tcpDestination + '.nmap'
+		xmlFile = tcpDestination + '.xml'
+		csvFile = tcpDestination + '.csv'
 
 		scanner = nmap.PortScanner()
-
-		if isValidPortGroup(ports):
-			ports = TranslatePortGroupToPortRange(ports)
 
 		if IsTopPortsRangeScan(ports):
 			isTopScan = True
 
-		if isTopScan:
-			scanner.scan(host, arguments=f'-sS -Pn -n -T4 --top-ports {ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
-		else:
-			scanner.scan(host, arguments=f'-sS -Pn -n -T4 -p{ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+		if isValidPortGroup(ports):
+			ports = TranslatePortGroupToPortRange(ports)
+		
 
-		with open(f'{destination}.xml', 'w') as f:
+		if isTopScan:
+			scanner.scan(host, arguments=f'-sS -Pn -n -T4 --open --defeat-rst-ratelimit --top-ports {ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+		else:
+			scanner.scan(host, arguments=f'-sS -Pn -n -T4 --open --defeat-rst-ratelimit -p{ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+
+		with open(f'{xmlFile}', 'w') as f:
 			f.write(scanner.get_nmap_last_output().decode('UTF-8'))
 
-		with open(f'{destination}.csv', 'w') as f:
+		with open(f'{csvFile}', 'w') as f:
 			f.write(scanner.csv())
 
 		print()
@@ -137,6 +141,7 @@ def ScanHost(host, ports, destination):
 		state_width = 6
 		service_width = 25
 
+		print()
 		PrintLineColored("{:<{proto_width}}  {:<{port_width}}  {:<{state_width}}  {:<{service_width}}".format("PROTOCOL", "PORT", "STATE", "SERVICE", 
 			proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width), "white")
 
@@ -152,7 +157,7 @@ def ScanHost(host, ports, destination):
 								proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width), "green")
 
 	except Exception as e:
-		PrintLineColored(e, "red")
+		#PrintLineColored(e, "red")
 		return
 
 
