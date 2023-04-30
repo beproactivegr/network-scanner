@@ -68,15 +68,24 @@ if not is_admin:
 ################################
 
 def GetMyHostname():
-	return socket.gethostname()
+	try:
+		return socket.gethostname()
+	except:
+		return ""
 
 
 def GetMyLocalIPaddress():
-	return socket.gethostbyname(socket.gethostname())
+	try:
+		return socket.gethostbyname(socket.gethostname())
+	except:
+		return ""
 
 
 def GetMyInternetIPaddress():
-	return get('https://api.ipify.org').content.decode('utf8')
+	try:
+		return get('https://api.ipify.org').content.decode('utf8')
+	except:
+		return ""
 
 
 def PrintColored(message, color):
