@@ -35,6 +35,8 @@ __maintainer__ = "beproactivegr"
 
 import sys
 import subprocess
+import ipaddress
+import re
 
 try:
 	from termcolor import colored
@@ -48,6 +50,85 @@ except ImportError:
 
 ################################
 
+#def ScanHost(host, ports):
+#    scanner = nmap.PortScanner()
+#    try:
+#        scanner.scan(ipAddress, arguments=f'-sS -Pn -n -T4 -p- --reason -oG tcp_ports_full_{ipAddress}.gnmap -oN tcp_ports_full_{ipAddress}.nmap')
+#        with open(f'tcp_ports_full_{ip_address}.xml', 'w') as f:
+#            f.write(scanner.get_nmap_last_output().decode('UTF-8'))
+#        with open(f'nmap_{ip_address}_tcp.csv', 'w') as f:
+#            f.write(scanner.csv())
+#    except:
+#        return
+
+
+def isValidPort(port):
+	try:
+	    port = int(port)
+	except ValueError:
+	    return False
+	if port < 1 or port > 65535:
+	    return False
+	return True
+
+
+def isValidPortRange(port):
+	if port.count("-") == 1:
+		ports = port.split('-')
+		for port in ports:
+			if not isValidPort(port):
+				return False
+		return True
+
+
+def isValidCommaSepPorts(port):
+	if port.count(",") >= 1:
+		ports = port.split(',')
+		for port in ports:
+			if not isValidPort(port):
+				return False
+		return True
+
+
+def isValidPortGroup(port):
+	if port == 'all':
+		return True
+	elif port.count("top-") == 1:
+		pattern = re.compile("^top-\d+$")
+		if pattern.match(port):
+			return True
+
+
+def IsValidPort(port):
+	if not isValidPort(port) and not isValidPortRange(port) and not isValidCommaSepPorts(port) and not isValidPortGroup(port):
+		return False
+	return True
+
+
+def IsValidHostname(hostname):
+    if len(hostname) > 255:
+        return False
+    if hostname[-1] == ".":
+        hostname = hostname[:-1]
+    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    return all(allowed.match(x) for x in hostname.split("."))
+
+
+def IsValidIPaddress(address):
+	try:
+		ip = ipaddress.ip_address(address)
+		return True
+	except ValueError:
+		return False
+
+
+def PrintColored(message, color):
+	print(colored(message, color), end="")
+
+
+def PrintLineColored(message, color):
+	print(colored(message, color))
+
 
 def is_platform_windows():
     return platform.system() == "Windows"
@@ -59,36 +140,36 @@ def is_platform_linux():
 
 def CheckPythonNmapInstallation():
 	try:
-		print(colored("Checking Python Nmap library: ", "white"), end="")
+		PrintColored("Checking Python Nmap library: ", "white")
 		import nmap
-		print(colored("Python Nmap library is installed.", "green"))
+		PrintLineColored("Python Nmap library is installed.", "green")
 	except ImportError:
-		print(colored('Python-nmap library is not installed. Installing now...', 'yellow'))
+		PrintLineColored('Python-nmap library is not installed. Installing now...', 'yellow')
 		subprocess.call(['pip', 'install', 'python-nmap'])
 
 	try:
 		import nmap
 	except ImportError:
-		print(colored('Python-nmap library is not installed. Exiting...', 'red'))
+		PrintLineColored('Python-nmap library is not installed. Exiting...', 'red')
 		sys.exit()
 
 
 def CheckNmapInstallation():
 	try:
-		print(colored("Checking Nmap: ", "white"), end="")
+		PrintColored("Checking Nmap: ", "white")
 		subprocess.check_output(["nmap", "--version"])
-		print(colored("Nmap is installed.", "green"))
+		PrintLineColored("Nmap is installed.", "green")
 	except OSError:
-		print(colored("Nmap is not installed.", "yellow"))
+		PrintLineColored("Nmap is not installed.", "yellow")
 
 		if is_platform_linux():
-			print(colored("Installing it now...", "yellow"))
+			PrintLineColored("Installing it now...", "yellow")
 			subprocess.call(["apt", "update"])
 			subprocess.call(["apt", "install", "-y", "nmap"])
 
 
 def GetUserInput(prompt):
-	return input(colored(prompt, "magenta"))
+	return input(colored(prompt, "magenta")).lower()
 
 
 if __name__ == '__main__':
@@ -96,18 +177,32 @@ if __name__ == '__main__':
 	try:
 
 		print()
-		print(colored("Network Scanner - https://beproactive.gr", "cyan"))
-		print(colored("A free and open source utility for network discovery.", "cyan"))
+		PrintLineColored(f'Network Scanner v{__version__} - https://beproactive.gr', "cyan")
+		PrintLineColored("A free and open source utility for network discovery by BeProactive.", "cyan")
 		print()
 
 		CheckNmapInstallation()
 		CheckPythonNmapInstallation()
 		print()
 
+
 		target = GetUserInput("Please provide an IP address or a hostname to scan: ")
 
-		print(colored(f'Scanning {target} ports. This may take a while...', "cyan"))
+		while not IsValidIPaddress(target) and not IsValidHostname(target):
+			PrintLineColored("Please provide a valid hostname, IP4 or IP6 address.", "yellow")
+			target = GetUserInput("Please provide an IP address or a hostname to scan: ")
 
+
+		ports = GetUserInput("Please provide port ranges. Ex: 22; 1-65535; 80,443,8080; all; top-100: ")
+
+		while not IsValidPort(ports):
+			PrintLineColored("Please provide valid port rages.", "yellow")
+			ports = GetUserInput("Please provide port ranges. Ex: 22; 1-65535; 80,443,8080; all; top-100: ")
+
+
+		print()
+
+		PrintLineColored(f'Scanning ports {ports} on host {target}.\nThis may take a while...', "cyan")
 		print()
 
 	except KeyboardInterrupt:
