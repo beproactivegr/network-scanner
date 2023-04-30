@@ -120,7 +120,8 @@ def ScanHost(host, ports, destination):
 	try:
 		isTopScan = False
 
-		tcpDestination = os.path.join(destination, f'network_scanner_tcp_results_{host}')
+		hostInFilename = host.replace("/", "_")
+		tcpDestination = os.path.join(destination, f'network_scanner_tcp_results_{hostInFilename}_{ports}')
 		gnmapFile = tcpDestination + '.gnmap'
 		nmapFile = tcpDestination + '.nmap'
 		xmlFile = tcpDestination + '.xml'
@@ -134,6 +135,8 @@ def ScanHost(host, ports, destination):
 		if isValidPortGroup(ports):
 			ports = TranslatePortGroupToPortRange(ports)
 		
+		if host.count(",") >= 1:
+			host = host.replace(",", " ")
 
 		if isTopScan:
 			scanner.scan(host, arguments=f'-sS -Pn -n -T4 --open --defeat-rst-ratelimit --top-ports {ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
@@ -148,14 +151,16 @@ def ScanHost(host, ports, destination):
 
 		print()
 
-		proto_width = 8
+		host_width = 20
+		proto_width = 9
 		port_width = 7
 		state_width = 6
-		service_width = 25
+		service_width = 15
+		hostname_width = 15
 
 		print()
-		PrintLineColored("{:<{proto_width}}  {:<{port_width}}  {:<{state_width}}  {:<{service_width}}".format("PROTOCOL", "PORT", "STATE", "SERVICE", 
-			proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width), "white")
+		PrintLineColored("{:<{host_width}} {:<{hostname_width}} {:<{proto_width}} {:<{port_width}} {:<{state_width}} {:<{service_width}}".format("IP", "HOSTNAME", "PROTOCOL", "PORT", "STATE", "SERVICE", 
+			host_width=host_width, proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width, hostname_width=hostname_width), "white")
 
 		for host in scanner.all_hosts():
 			if scanner[host].state() == 'up':
@@ -165,11 +170,11 @@ def ScanHost(host, ports, destination):
 						if scanner[host][proto][port]['state'] == 'open':
 							protocol = proto.upper()
 							service = scanner[host][proto][port]["name"]
-							PrintLineColored("{:<{proto_width}}  {:<{port_width}}  {:<{state_width}}  {:<{service_width}}".format(protocol, port, "OPEN", service, 
-								proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width), "green")
+							PrintLineColored("{:<{host_width}} {:<{hostname_width}} {:<{proto_width}} {:<{port_width}} {:<{state_width}} {:<{service_width}}".format(host, scanner[host].hostname(), protocol, port, "OPEN", service, 
+								host_width=host_width, proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width, hostname_width=hostname_width), "green")
 
 	except Exception as e:
-		#PrintLineColored(e, "red")
+		PrintLineColored(e, "red")
 		return
 
 
@@ -224,6 +229,32 @@ def IsValidIPaddress(address):
 		return False
 
 
+def IsValidIPnetwork(address):
+	try:
+		ip = ipaddress.ip_network(address)
+		return True
+	except ValueError:
+		return False
+
+
+def IsValidCommaSepHosts(address):
+	if address.count(",") >= 1:
+		addresses = address.split(',')
+		for addr in addresses:
+			if not IsValidIPaddress(addr) and not IsValidIPnetwork(addr) and not IsValidHostname(addr):
+				return False
+		return True
+
+
+def IsValidSpaceSepHosts(address):
+	if address.count(" ") >= 1:
+		addresses = address.split(' ')
+		for addr in addresses:
+			if not IsValidIPaddress(addr) and not IsValidIPnetwork(addr) and not IsValidHostname(addr):
+				return False
+		return True
+
+
 def is_platform_windows():
     return platform.system() == "Windows"
 
@@ -234,9 +265,7 @@ def is_platform_linux():
 
 def CheckNmapInstallation():
 	try:
-		PrintColored("Checking Nmap: ", "white")
 		subprocess.check_output(["nmap", "--version"])
-		PrintLineColored("Nmap is installed.", "green")
 	except OSError:
 		PrintLineColored("Nmap is not installed (https://nmap.org/download).", "yellow")
 
@@ -268,23 +297,23 @@ if __name__ == '__main__':
 		print()
 
 
-		target = GetUserInput("Please provide an IP address or a hostname to scan: ")
+		target = GetUserInput("Please provide an IP(4/6) address, a network subnet or a hostname(FQDN) to scan: ")
 
-		while not IsValidIPaddress(target) and not IsValidHostname(target):
-			PrintLineColored("Please provide a valid hostname, IP4 or IP6 address.", "yellow")
-			target = GetUserInput("Please provide an IP address or a hostname to scan: ")
+		while not IsValidIPaddress(target) and not IsValidHostname(target) and not IsValidIPnetwork(target) and not IsValidCommaSepHosts(target) and not IsValidSpaceSepHosts(target):
+			PrintLineColored("Please provide a valid hostname, IP4, IP6 address or a network subnet.", "yellow")
+			target = GetUserInput("Please provide an IP(4/6) address, a network subnet or a hostname(FQDN) to scan: ")
 
 
 		ports = GetUserInput("Please provide port ranges. Ex: 22; 1-65535; 80,443,8080; all; top-100: ")
 
 		while not IsValidPort(ports):
-			PrintLineColored("Please provide valid port rages.", "yellow")
+			PrintLineColored("Please provide valid port ranges.", "yellow")
 			ports = GetUserInput("Please provide port ranges. Ex: 22; 1-65535; 80,443,8080; all; top-100: ")
 
 
 		print()
 
-		PrintLineColored(f'Scanning ports {ports} on host {target}.\nThis may take a while...', "cyan")
+		PrintLineColored(f'Scanning ports {ports} on host/s {target}.\nThis may take a while...', "cyan")
 		print()
 
 		CreateDir('logs')
@@ -299,6 +328,7 @@ if __name__ == '__main__':
 				break
 			PrintFlushColored("..", "green")
 
+		print()
 		print()
 
 	except KeyboardInterrupt:
