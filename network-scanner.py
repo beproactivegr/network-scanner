@@ -34,12 +34,14 @@ __maintainer__ = "beproactivegr"
 ################################
 
 import os
+import socket
 import ctypes
 import sys
 import subprocess
 import ipaddress
 import re
 from threading import Thread
+from requests import get
 
 try:
 	from termcolor import colored
@@ -64,6 +66,18 @@ if not is_admin:
 
 
 ################################
+
+def GetMyHostname():
+	return socket.gethostname()
+
+
+def GetMyLocalIPaddress():
+	return socket.gethostbyname(socket.gethostname())
+
+
+def GetMyInternetIPaddress():
+	return get('https://api.ipify.org').content.decode('utf8')
+
 
 def PrintColored(message, color):
 	print(colored(message, color), end="")
@@ -192,7 +206,7 @@ def ScanHost(scanner, host, proto, ports, destination):
 		return
 
 
-def ScanHostServices(scanner, proto, destination):
+def ScanHostServices(scanner, target, proto, targetPorts, destination):
 	try:
 		scanFlag = '-sS'
 		defeat = '--defeat-rst-ratelimit'
@@ -210,8 +224,8 @@ def ScanHostServices(scanner, proto, destination):
 
 		ports = ','.join(unique_ports)
 
-		hostInFilename = hosts.replace(" ", ",")
-		tcpDestination = os.path.join(destination, f'network_scanner_{proto}_services_results_{hostInFilename}_{ports}')
+		hostInFilename = target.replace("/", "_")
+		tcpDestination = os.path.join(destination, f'network_scanner_{proto}_services_results_{hostInFilename}_{targetPorts}')
 		gnmapFile = tcpDestination + '.gnmap'
 		nmapFile = tcpDestination + '.nmap'
 		xmlFile = tcpDestination + '.xml'
@@ -262,7 +276,7 @@ def ScanHostServices(scanner, proto, destination):
 								service_width=service_width, hostname_width=hostname_width, product_width=product_width, version_width=version_width), "green")
 
 	except Exception as e:
-	#	PrintLineColored(e, "red")
+		PrintLineColored(e, "red")
 		return
 
 
@@ -371,6 +385,9 @@ def CreateDir(folder):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
+######################################################################################################
+######################################################################################################
+
 if __name__ == '__main__':
 
 	try:
@@ -384,6 +401,18 @@ if __name__ == '__main__':
 		CheckNmapInstallation()
 		print()
 
+
+		myhostname = GetMyHostname()
+		localIp = GetMyLocalIPaddress()
+		internetIp = GetMyInternetIPaddress()
+
+		PrintColored('Your computer hostname: ', "white")
+		PrintLineColored(myhostname, "cyan")
+		PrintColored('Your local IP address: ', "white")
+		PrintLineColored(localIp, "cyan")
+		PrintColored('Your internet IP address: ', "white")
+		PrintLineColored(internetIp, "cyan")
+		print()
 
 		target = GetUserInput("Please provide an IP(4/6) address, a network subnet or a hostname(FQDN) to scan: ")
 
@@ -437,7 +466,7 @@ if __name__ == '__main__':
 			PrintLineColored(f'Scanning {protoForPrint} services on open ports {ports} for live host/s {target}.\nThis may take a while...', "cyan")
 			print()
 
-			scan_thread = Thread(target=ScanHostServices, args=(scanner, proto, destination,))
+			scan_thread = Thread(target=ScanHostServices, args=(scanner, target, proto, ports, destination,))
 			scan_thread.start()
 
 			while True:
@@ -453,4 +482,7 @@ if __name__ == '__main__':
 		sys.exit(0)
 	finally:
 		print()
-		GetUserInput("Press Enter to exit ...")
+		try:
+			GetUserInput("Press Enter to exit ...")
+		except:
+			pass
