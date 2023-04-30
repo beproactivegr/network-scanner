@@ -34,6 +34,7 @@ __maintainer__ = "beproactivegr"
 ################################
 
 import os
+import ctypes
 import sys
 import subprocess
 import ipaddress
@@ -50,6 +51,17 @@ try:
 	from termcolor import colored
 except ImportError:
 	sys.exit()
+
+################################
+
+try:
+	is_admin = os.getuid() == 0
+except AttributeError:
+	is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+
+if not is_admin:
+    print(colored("This script requires admin privileges to run TCP SYN scans otherwise TCP Connect will be used.", "yellow"))
+
 
 ################################
 
@@ -249,6 +261,7 @@ if __name__ == '__main__':
 		print()
 		PrintLineColored(f'Network Scanner v{__version__} - https://beproactive.gr', "cyan")
 		PrintLineColored("A free and open source utility for network discovery by BeProactive.", "cyan")
+		PrintLineColored("https://github.com/beproactivegr/network-scanner.", "cyan")
 		print()
 
 		CheckNmapInstallation()
@@ -290,3 +303,6 @@ if __name__ == '__main__':
 
 	except KeyboardInterrupt:
 		sys.exit(0)
+
+#ToDo multiple hosts or ip ranges
+#ToDo UDP scans
