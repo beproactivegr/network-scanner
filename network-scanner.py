@@ -107,6 +107,14 @@ def TranslatePortGroupToPortRange(port):
 			return port.replace("top-", "")
 
 
+def IsValidProto(proto):
+	if proto == 'tcp':
+		return True
+	elif proto == 'udp':
+		return True
+	return False
+
+
 def isValidPortGroup(port):
 	if port == 'all':
 		return True
@@ -116,12 +124,14 @@ def isValidPortGroup(port):
 			return True
 
 
-def ScanHost(host, ports, destination):
+def ScanHost(host, proto, ports, destination):
 	try:
 		isTopScan = False
+		scanFlag = '-sS'
+		defeat = '--defeat-rst-ratelimit'
 
 		hostInFilename = host.replace("/", "_")
-		tcpDestination = os.path.join(destination, f'network_scanner_tcp_results_{hostInFilename}_{ports}')
+		tcpDestination = os.path.join(destination, f'network_scanner_{proto}_results_{hostInFilename}_{ports}')
 		gnmapFile = tcpDestination + '.gnmap'
 		nmapFile = tcpDestination + '.nmap'
 		xmlFile = tcpDestination + '.xml'
@@ -138,10 +148,14 @@ def ScanHost(host, ports, destination):
 		if host.count(",") >= 1:
 			host = host.replace(",", " ")
 
+		if proto == 'udp':
+			scanFlag = '-sU'
+			defeat = '--defeat-icmp-ratelimit'
+
 		if isTopScan:
-			scanner.scan(host, arguments=f'-sS -Pn -n -T4 --open --defeat-rst-ratelimit --top-ports {ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+			scanner.scan(host, arguments=f'{scanFlag} -Pn -n -T4 --open {defeat} --top-ports {ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
 		else:
-			scanner.scan(host, arguments=f'-sS -Pn -n -T4 --open --defeat-rst-ratelimit -p{ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+			scanner.scan(host, arguments=f'{scanFlag} -Pn -n -T4 --open {defeat} -p{ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
 
 		with open(f'{xmlFile}', 'w') as f:
 			f.write(scanner.get_nmap_last_output().decode('UTF-8'))
@@ -311,15 +325,23 @@ if __name__ == '__main__':
 			ports = GetUserInput("Please provide port ranges. Ex: 22; 1-65535; 80,443,8080; all; top-100: ")
 
 
+		proto = GetUserInput("Please provide the protocol to scan (tcp/udp): ")
+
+		while not IsValidProto(proto):
+			PrintLineColored("Please provide a valid protocol.", "yellow")
+			proto = GetUserInput("Please provide the protocol to scan (tcp/udp): ")
+
+
 		print()
 
-		PrintLineColored(f'Scanning ports {ports} on host/s {target}.\nThis may take a while...', "cyan")
+		protoForPrint = proto.upper()
+		PrintLineColored(f'Scanning {protoForPrint} ports {ports} on host/s {target}.\nThis may take a while...', "cyan")
 		print()
 
 		CreateDir('logs')
 		destination = os.path.join(os.getcwd(), 'logs')
 
-		scan_thread = Thread(target=ScanHost, args=(target, ports, destination,))
+		scan_thread = Thread(target=ScanHost, args=(target, proto, ports, destination,))
 		scan_thread.start()
 
 		while True:
