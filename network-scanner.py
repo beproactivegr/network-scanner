@@ -124,7 +124,7 @@ def isValidPortGroup(port):
 			return True
 
 
-def ScanHost(host, proto, ports, destination):
+def ScanHost(scanner, host, proto, ports, destination):
 	try:
 		isTopScan = False
 		scanFlag = '-sS'
@@ -136,8 +136,6 @@ def ScanHost(host, proto, ports, destination):
 		nmapFile = tcpDestination + '.nmap'
 		xmlFile = tcpDestination + '.xml'
 		csvFile = tcpDestination + '.csv'
-
-		scanner = nmap.PortScanner()
 
 		if IsTopPortsRangeScan(ports):
 			isTopScan = True
@@ -183,12 +181,88 @@ def ScanHost(host, proto, ports, destination):
 					for port in lport:
 						if scanner[host][proto][port]['state'] == 'open':
 							protocol = proto.upper()
+							#print(scanner[host][proto][port]['product'])
+							#print(scanner[host][proto][port]['version'])
 							service = scanner[host][proto][port]["name"]
 							PrintLineColored("{:<{host_width}} {:<{hostname_width}} {:<{proto_width}} {:<{port_width}} {:<{state_width}} {:<{service_width}}".format(host, scanner[host].hostname(), protocol, port, "OPEN", service, 
 								host_width=host_width, proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width, hostname_width=hostname_width), "green")
 
 	except Exception as e:
-		PrintLineColored(e, "red")
+		#PrintLineColored(e, "red")
+		return
+
+
+def ScanHostServices(scanner, proto, destination):
+	try:
+		scanFlag = '-sS'
+		defeat = '--defeat-rst-ratelimit'
+
+		hosts = ' '.join(scanner.all_hosts())
+
+		unique_ports = []
+		for host in scanner.all_hosts():
+			if scanner[host].state() == 'up':
+				for proto in scanner[host].all_protocols():
+					lport = scanner[host][proto].keys()
+					for port in lport:
+						if str(port) not in unique_ports:
+							unique_ports.append(str(port))
+
+		ports = ','.join(unique_ports)
+
+		hostInFilename = hosts.replace(" ", ",")
+		tcpDestination = os.path.join(destination, f'network_scanner_{proto}_services_results_{hostInFilename}_{ports}')
+		gnmapFile = tcpDestination + '.gnmap'
+		nmapFile = tcpDestination + '.nmap'
+		xmlFile = tcpDestination + '.xml'
+		csvFile = tcpDestination + '.csv'
+
+		if proto == 'udp':
+			scanFlag = '-sU'
+			defeat = '--defeat-icmp-ratelimit'
+
+		scanner.scan(hosts, arguments=f'{scanFlag} -sV -Pn -n -T4 --open {defeat} -p{ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+
+		with open(f'{xmlFile}', 'w') as f:
+			f.write(scanner.get_nmap_last_output().decode('UTF-8'))
+
+		with open(f'{csvFile}', 'w') as f:
+			f.write(scanner.csv())
+
+		print()
+
+		host_width = 20
+		proto_width = 9
+		port_width = 7
+		state_width = 6
+		service_width = 15
+		hostname_width = 15
+		product_width = 35
+		version_width = 15
+
+		print()
+		PrintLineColored("{:<{host_width}} {:<{hostname_width}} {:<{proto_width}} {:<{port_width}} {:<{state_width}} {:<{service_width}} {:<{product_width}} {:<{version_width}}".format(
+			"IP", "HOSTNAME", "PROTOCOL", "PORT", "STATE", "SERVICE", "PRODUCT", "VERSION", 
+			host_width=host_width, proto_width=proto_width, port_width=port_width, state_width=state_width, 
+			service_width=service_width, hostname_width=hostname_width, product_width=product_width, version_width=version_width), "white")
+
+		for host in scanner.all_hosts():
+			if scanner[host].state() == 'up':
+				for proto in scanner[host].all_protocols():
+					lport = scanner[host][proto].keys()
+					for port in lport:
+						if scanner[host][proto][port]['state'] == 'open':
+							protocol = proto.upper()
+							product = scanner[host][proto][port]['product']
+							version = scanner[host][proto][port]['version']
+							service = scanner[host][proto][port]["name"]
+							PrintLineColored("{:<{host_width}} {:<{hostname_width}} {:<{proto_width}} {:<{port_width}} {:<{state_width}} {:<{service_width}} {:<{product_width}} {:<{version_width}}".format(
+								host, scanner[host].hostname(), protocol, port, "OPEN", service, product, version, 
+								host_width=host_width, proto_width=proto_width, port_width=port_width, state_width=state_width, 
+								service_width=service_width, hostname_width=hostname_width, product_width=product_width, version_width=version_width), "green")
+
+	except Exception as e:
+	#	PrintLineColored(e, "red")
 		return
 
 
@@ -341,7 +415,8 @@ if __name__ == '__main__':
 		CreateDir('logs')
 		destination = os.path.join(os.getcwd(), 'logs')
 
-		scan_thread = Thread(target=ScanHost, args=(target, proto, ports, destination,))
+		scanner = nmap.PortScanner()
+		scan_thread = Thread(target=ScanHost, args=(scanner, target, proto, ports, destination,))
 		scan_thread.start()
 
 		while True:
@@ -349,6 +424,27 @@ if __name__ == '__main__':
 			if not scan_thread.is_alive():
 				break
 			PrintFlushColored("..", "green")
+
+
+		print()
+		print()
+
+		scanServices = GetUserInput("Would you like to determine service/version info? (yes/no): ")
+
+		if scanServices == 'yes' or scanServices == 'y':
+
+			print()
+			PrintLineColored(f'Scanning {protoForPrint} services on open ports {ports} for live host/s {target}.\nThis may take a while...', "cyan")
+			print()
+
+			scan_thread = Thread(target=ScanHostServices, args=(scanner, proto, destination,))
+			scan_thread.start()
+
+			while True:
+				scan_thread.join(timeout=3)
+				if not scan_thread.is_alive():
+					break
+				PrintFlushColored("..", "green")
 
 		print()
 		print()
