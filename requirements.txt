@@ -1,0 +1,2 @@
+python_nmap==0.7.1
+termcolor==2.3.0

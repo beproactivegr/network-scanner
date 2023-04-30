@@ -451,4 +451,6 @@ if __name__ == '__main__':
 
 	except KeyboardInterrupt:
 		sys.exit(0)
-
+	finally:
+		print()
+		GetUserInput("Press Enter to exit ...")
