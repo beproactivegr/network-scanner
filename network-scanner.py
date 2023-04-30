@@ -33,14 +33,17 @@ __maintainer__ = "beproactivegr"
 
 ################################
 
+import os
 import sys
 import subprocess
 import ipaddress
 import re
+from threading import Thread
 
 try:
 	from termcolor import colored
 except ImportError:
+	print('termcolor library is not installed. Installing now...')
 	subprocess.call(['pip', 'install', 'termcolor'])
 
 try:
@@ -50,16 +53,107 @@ except ImportError:
 
 ################################
 
-#def ScanHost(host, ports):
-#    scanner = nmap.PortScanner()
-#    try:
-#        scanner.scan(ipAddress, arguments=f'-sS -Pn -n -T4 -p- --reason -oG tcp_ports_full_{ipAddress}.gnmap -oN tcp_ports_full_{ipAddress}.nmap')
-#        with open(f'tcp_ports_full_{ip_address}.xml', 'w') as f:
-#            f.write(scanner.get_nmap_last_output().decode('UTF-8'))
-#        with open(f'nmap_{ip_address}_tcp.csv', 'w') as f:
-#            f.write(scanner.csv())
-#    except:
-#        return
+def PrintColored(message, color):
+	print(colored(message, color), end="")
+
+
+def PrintFlushColored(message, color):
+	print(colored(message, color), end="", flush=True)
+
+
+def PrintLineColored(message, color):
+	print(colored(message, color))
+
+
+try:
+	import nmap
+except ImportError:
+	PrintLineColored('Python-nmap library is not installed. Installing now...', 'yellow')
+	subprocess.call(['pip', 'install', 'python-nmap'])
+
+try:
+	import nmap
+except ImportError:
+	PrintLineColored('Python-nmap library is not installed. Exiting...', 'red')
+	sys.exit()
+
+
+def IsTopPortsRangeScan(port):
+	if port.count("top-") == 1:
+		pattern = re.compile("^top-\d+$")
+		if pattern.match(port):
+			return True
+	return False
+
+
+def TranslatePortGroupToPortRange(port):
+	if port == 'all':
+		return '1-65535'
+	elif port.count("top-") == 1:
+		pattern = re.compile("^top-\d+$")
+		if pattern.match(port):
+			return port.replace("top-", "")
+
+
+def isValidPortGroup(port):
+	if port == 'all':
+		return True
+	elif port.count("top-") == 1:
+		pattern = re.compile("^top-\d+$")
+		if pattern.match(port):
+			return True
+
+
+def ScanHost(host, ports, destination):
+	try:
+		isTopScan = False
+		destination = os.path.join(destination, f'network_scanner_results_{host}')
+		gnmapFile = destination + '.gnmap'
+		nmapFile = destination + '.nmap'
+
+		scanner = nmap.PortScanner()
+
+		if isValidPortGroup(ports):
+			ports = TranslatePortGroupToPortRange(ports)
+
+		if IsTopPortsRangeScan(ports):
+			isTopScan = True
+
+		if isTopScan:
+			scanner.scan(host, arguments=f'-sS -Pn -n -T4 --top-ports {ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+		else:
+			scanner.scan(host, arguments=f'-sS -Pn -n -T4 -p{ports} --reason -oG "{gnmapFile}" -oN "{nmapFile}"')
+
+		with open(f'{destination}.xml', 'w') as f:
+			f.write(scanner.get_nmap_last_output().decode('UTF-8'))
+
+		with open(f'{destination}.csv', 'w') as f:
+			f.write(scanner.csv())
+
+		print()
+
+		proto_width = 8
+		port_width = 7
+		state_width = 6
+		service_width = 25
+
+		PrintLineColored("{:<{proto_width}}  {:<{port_width}}  {:<{state_width}}  {:<{service_width}}".format("PROTOCOL", "PORT", "STATE", "SERVICE", 
+			proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width), "white")
+
+		for host in scanner.all_hosts():
+			if scanner[host].state() == 'up':
+				for proto in scanner[host].all_protocols():
+					lport = scanner[host][proto].keys()
+					for port in lport:
+						if scanner[host][proto][port]['state'] == 'open':
+							protocol = proto.upper()
+							service = scanner[host][proto][port]["name"]
+							PrintLineColored("{:<{proto_width}}  {:<{port_width}}  {:<{state_width}}  {:<{service_width}}".format(protocol, port, "OPEN", service, 
+								proto_width=proto_width, port_width=port_width, state_width=state_width, service_width=service_width), "green")
+
+	except Exception as e:
+		PrintLineColored(e, "red")
+		return
 
 
 def isValidPort(port):
@@ -90,15 +184,6 @@ def isValidCommaSepPorts(port):
 		return True
 
 
-def isValidPortGroup(port):
-	if port == 'all':
-		return True
-	elif port.count("top-") == 1:
-		pattern = re.compile("^top-\d+$")
-		if pattern.match(port):
-			return True
-
-
 def IsValidPort(port):
 	if not isValidPort(port) and not isValidPortRange(port) and not isValidCommaSepPorts(port) and not isValidPortGroup(port):
 		return False
@@ -122,14 +207,6 @@ def IsValidIPaddress(address):
 		return False
 
 
-def PrintColored(message, color):
-	print(colored(message, color), end="")
-
-
-def PrintLineColored(message, color):
-	print(colored(message, color))
-
-
 def is_platform_windows():
     return platform.system() == "Windows"
 
@@ -138,29 +215,13 @@ def is_platform_linux():
     return platform.system() == "Linux"
 
 
-def CheckPythonNmapInstallation():
-	try:
-		PrintColored("Checking Python Nmap library: ", "white")
-		import nmap
-		PrintLineColored("Python Nmap library is installed.", "green")
-	except ImportError:
-		PrintLineColored('Python-nmap library is not installed. Installing now...', 'yellow')
-		subprocess.call(['pip', 'install', 'python-nmap'])
-
-	try:
-		import nmap
-	except ImportError:
-		PrintLineColored('Python-nmap library is not installed. Exiting...', 'red')
-		sys.exit()
-
-
 def CheckNmapInstallation():
 	try:
 		PrintColored("Checking Nmap: ", "white")
 		subprocess.check_output(["nmap", "--version"])
 		PrintLineColored("Nmap is installed.", "green")
 	except OSError:
-		PrintLineColored("Nmap is not installed.", "yellow")
+		PrintLineColored("Nmap is not installed (https://nmap.org/download).", "yellow")
 
 		if is_platform_linux():
 			PrintLineColored("Installing it now...", "yellow")
@@ -172,6 +233,10 @@ def GetUserInput(prompt):
 	return input(colored(prompt, "magenta")).lower()
 
 
+def CreateDir(folder):
+	if not os.path.exists(folder):
+		os.makedirs(folder)
+
 if __name__ == '__main__':
 
 	try:
@@ -182,7 +247,6 @@ if __name__ == '__main__':
 		print()
 
 		CheckNmapInstallation()
-		CheckPythonNmapInstallation()
 		print()
 
 
@@ -203,6 +267,20 @@ if __name__ == '__main__':
 		print()
 
 		PrintLineColored(f'Scanning ports {ports} on host {target}.\nThis may take a while...', "cyan")
+		print()
+
+		CreateDir('logs')
+		destination = os.path.join(os.getcwd(), 'logs')
+
+		scan_thread = Thread(target=ScanHost, args=(target, ports, destination,))
+		scan_thread.start()
+
+		while True:
+			scan_thread.join(timeout=3)
+			if not scan_thread.is_alive():
+				break
+			PrintFlushColored("..", "green")
+
 		print()
 
 	except KeyboardInterrupt:
