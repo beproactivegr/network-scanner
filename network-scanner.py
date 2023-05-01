@@ -40,6 +40,7 @@ import sys
 import subprocess
 import ipaddress
 import re
+import platform
 from threading import Thread
 from requests import get
 
@@ -76,7 +77,7 @@ def GetMyHostname():
 
 def GetMyLocalIPaddress():
 	try:
-		return socket.gethostbyname(socket.gethostname())
+		return socket.gethostbyname(socket.gethostname() + ".local")
 	except:
 		return ""
 
