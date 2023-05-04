@@ -40,6 +40,7 @@ import sys
 import subprocess
 import ipaddress
 import re
+import time
 import platform
 from threading import Thread
 from requests import get
@@ -64,6 +65,8 @@ except AttributeError:
 
 if not is_admin:
     print(colored("This script requires admin privileges to run TCP SYN scans otherwise TCP Connect will be used.", "yellow"))
+else:
+	print(colored("Running with root privileges.", "yellow"))
 
 
 ################################
@@ -395,22 +398,68 @@ def CreateDir(folder):
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
+
+def calculateElapsedTime(start_time):
+    elapsed_seconds = round(time.time() - start_time)
+
+    m, s = divmod(elapsed_seconds, 60)
+    h, m = divmod(m, 60)
+
+    elapsed_time = []
+    if h == 1:
+        elapsed_time.append(str(h) + ' hour')
+    elif h > 1:
+        elapsed_time.append(str(h) + ' hours')
+
+    if m == 1:
+        elapsed_time.append(str(m) + ' minute')
+    elif m > 1:
+        elapsed_time.append(str(m) + ' minutes')
+
+    if s == 1:
+        elapsed_time.append(str(s) + ' second')
+    elif s > 1:
+        elapsed_time.append(str(s) + ' seconds')
+    else:
+        elapsed_time.append('less than a second')
+
+    return ', '.join(elapsed_time)
+
+
+
 ######################################################################################################
 ######################################################################################################
+
+message = """
+  ____       _____                      _   _           
+ |  _ \\     |  __ \\                    | | (_)          
+ | |_) | ___| |__) | __ ___   __ _  ___| |_ ___   _____ 
+ |  _ < / _ \\  ___/ '__/ _ \\ / _` |/ __| __| \\ \\ / / _ \\
+ | |_) |  __/ |   | | | (_) | (_| | (__| |_| |\\ V /  __/
+ |____/ \\___|_|   |_|  \\___/ \\__,_|\\___|\\__|_| \\_/ \\___|
+                                                        
+                                                                                                                                                                                                      
+Network Scanner v{0}.
+Network Scanner is a free and open source utility for network discovery (GPLv3).
+Written by: https://twitter.com/beproactivegr
+Web: https://beproactive.gr
+Project: https://github.com/beproactivegr/network-scanner
+Email: social@beproactive.gr
+""".format(__version__)
+
+
 
 if __name__ == '__main__':
 
 	try:
 
 		print()
-		PrintLineColored(f'Network Scanner v{__version__} - https://beproactive.gr', "cyan")
-		PrintLineColored("A free and open source utility for network discovery by BeProactive.", "cyan")
-		PrintLineColored("https://github.com/beproactivegr/network-scanner.", "cyan")
-		print()
+		PrintLineColored(message, "cyan")
 
 		CheckNmapInstallation()
 		print()
 
+		start_time = time.time()
 
 		myhostname = GetMyHostname()
 		localIp = GetMyLocalIPaddress()
@@ -485,7 +534,10 @@ if __name__ == '__main__':
 					break
 				PrintFlushColored("..", "green")
 
+		elapsed_time = calculateElapsedTime(start_time)
+
 		print()
+		PrintLineColored(f'Network Scanner completed in {elapsed_time}!',"cyan")
 		print()
 
 	except KeyboardInterrupt:
