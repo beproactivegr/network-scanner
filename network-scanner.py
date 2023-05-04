@@ -28,7 +28,7 @@ __author__ = "beproactivegr"
 __copyright__ = "Copyright (c) 2023 @beproactivegr"
 __credits__ = ["beproactivegr"]
 __license__ = "GPLv3"
-__version__ = "1.1"
+__version__ = "1.2"
 __maintainer__ = "beproactivegr"
 
 ################################
